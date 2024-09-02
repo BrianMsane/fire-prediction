@@ -7,8 +7,7 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.svm import SVR
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import AdaBoostRegressor, RandomForestRegressor
-from imblearn.over_sampling import SMOTE
-from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import mean_squared_error
 from sklearn.decomposition import PCA
 from sklearn.feature_selection import RFE
 
@@ -23,12 +22,6 @@ def scaler(X_train, X_test, minmax: bool=False):
         X_train = minmaxscaler.fit_transform(X_train)
         X_test = minmaxscaler.transform(X_test)
     return X_train, X_test
-
-
-def handle_imbalance(X_train, y_train) -> tuple:
-    smote = SMOTE(random_state=42)
-    X_train, y_train = smote.fit_resample(X_train, y_train)
-    return X_train, y_train
 
 
 def reduce_dimensions(train: pd.DataFrame, n: int=2):
@@ -69,7 +62,7 @@ def outlierHandler(data: pd.DataFrame) -> pd.DataFrame:
         max_limit = q2 + (1.5 * iqr)
         min_limit = q1 - (1.5 * iqr)
         data[col]  = pd.DataFrame(
-            np.where(data[col] > max_limit, max_limit, 
+            np.where(data[col] > max_limit, max_limit,
             (np.where(data[col] < min_limit, min_limit, data[col]))), columns=[col]
         )
     return data
@@ -88,3 +81,8 @@ def feature_selection(X_train, X_test, y_train, index: int) -> tuple:
     X_train_rfe = sel.transform(X_train) 
     X_test_rfe = sel.transform(X_test)
     return X_train_rfe, X_test_rfe
+
+
+def boxcox_transform(label, back: bool=False):
+    if back:
+        pass

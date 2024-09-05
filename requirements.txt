@@ -1,0 +1,10 @@
+scikit-learn
+keras
+keras-tuner
+yellowbrick
+pandas
+numpy
+seaborn
+matplotlib
+lightgbm
+xgboost

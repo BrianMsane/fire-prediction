@@ -6,5 +6,7 @@ pandas
 numpy
 seaborn
 matplotlib
-lightgbm
-xgboost
+fbprophet
+statsmodels
+pykalman
+pmdarima

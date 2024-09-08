@@ -1,0 +1,5 @@
+Time series data is stationary if it does not exhibit long-term obvious seasonality therefore, it has:
+> a constant variance through time
+> constant mean through time
+> the statistical properties of the time series do not change
+

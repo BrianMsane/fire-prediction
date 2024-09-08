@@ -1,12 +1,9 @@
 scikit-learn
-keras
-keras-tuner
-yellowbrick
 pandas
 numpy
 seaborn
 matplotlib
-fbprophet
 statsmodels
 pykalman
 pmdarima
+prophet

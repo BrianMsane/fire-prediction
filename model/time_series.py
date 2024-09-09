@@ -7,20 +7,19 @@ import pandas as pd
 import numpy as np
 import numpy as np
 import pandas as pd
-from prophet.forecaster import Prophet # type: ignore
+from prophet.forecaster import Prophet
 from sklearn.metrics import mean_squared_error
 from scipy.signal import savgol_filter
-from statsmodels.tsa.holtwinters import ExponentialSmoothing # type: ignore
-from statsmodels.nonparametric.smoothers_lowess import lowess # type: ignore
-from pykalman import KalmanFilter # type: ignore
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+from statsmodels.nonparametric.smoothers_lowess import lowess
+from pykalman import KalmanFilter
 from scipy.ndimage import gaussian_filter1d
 from scipy.fftpack import fft, ifft
 import pandas as pd
 import numpy as np
-from statsmodels.tsa.statespace.sarimax import SARIMAX # type: ignore
-from pykalman import KalmanFilter # type: ignore
-from pmdarima import auto_arima # type: ignore
-from sklearn.metrics import mean_squared_error
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+from pmdarima import auto_arima 
+
 
 
 def smooth_data(
@@ -68,89 +67,26 @@ def smooth_data(
 def add_regressors(data: pd.DataFrame):
     regressors = []
     vital = ('ds', 'y')
+    remove = ['ID', 'burn_area']
     for column in data.columns:
-        if column not in vital:
+        if column not in vital and column not in remove:
             regressors.append(column)
     return regressors
 
 
 def feature_engineering(data: pd.DataFrame):
+
+    # data['area'] = pd.to_numeric(data['ID'].apply(lambda x: x.split('_')[0]))
+    # data['date'] = pd.to_datetime(data['ID'].apply(lambda x: x.split('_')[1]))
+    # data['burn_area'] = pd.to_numeric(data['burn_area'], errors='coerce')
+    # data['month'] = data.date.dt.month
+    # data['year'] = data.date.dt.year
+    # data['day'] = data.date.dt.weekday
+    # data['quarter'] = data.date.dt.quarter
+    # data['dayofmonth'] =data.date.dt.day
+    # data['dayofyear'] = data.date.dt.dayofyear
+    # data['weekofyear'] = data.date.dt.isocalendar().week
     return data
-
-
-# def train_sarimax_auto_arima(
-#     train: pd.DataFrame, 
-#     test: pd.DataFrame, 
-#     non_seasonal_order=(2, 0, 0), 
-#     best_seasonal_order=(2, 0, 1, 12)
-# ):
-#     rmse_values = []
-
-#     for real_id in train['real_id'].unique():
-#         # Filter the train and test data for the current area ID
-#         train_area = train.loc[train.real_id == real_id]
-#         test_area = test.loc[test.real_id == real_id]
-
-#         # Train Test Split
-#         X_train_area = train_area.loc[train_area.index.strftime('%Y-%m-%d') < '2011-01-01']
-#         y_test_area = train_area.loc[train_area.index.strftime('%Y-%m-%d') >= '2011-01-01']
-
-#         try:
-#             # Fit SARIMAX model with the best orders on X_train set
-#             sarimax_model = SARIMAX(X_train_area['burn_area'],
-#                                     order=non_seasonal_order,
-#                                     seasonal_order=best_seasonal_order)
-#             sarima_fit = sarimax_model.fit(disp=False)
-
-#             # Forecast for the specific number of months
-#             forecast_months = len(y_test_area)
-
-#             # Perform the forecast
-#             sarimax_pred = sarima_fit.get_forecast(steps=forecast_months)
-
-#             # Extract predicted values
-#             predicted_values = sarimax_pred.predicted_mean
-
-#             # Apply Kalman Filter to smooth the predictions
-#             kf = KalmanFilter(initial_state_mean=predicted_values.iloc[0], n_dim_obs=1)
-#             predicted_values_kf, _ = kf.filter(predicted_values.values)
-#             predicted_data_df = pd.Series(predicted_values_kf.flatten(), index=y_test_area.index, name='burn_area')
-
-#         except Exception as e:
-#             print(f"Failed to model real_id {real_id}: {e}. Generating ARIMA forecast")
-#             try:
-#                 # Auto ARIMA model tuning
-#                 model_arima = auto_arima(X_train_area['burn_area'], m=12, seasonal=True,
-#                                          start_p=0, start_q=0, max_order=5, test='adf', error_action='ignore',
-#                                          suppress_warnings=True, stepwise=True, trace=False)
-#                 forecast_length = len(y_test_area)
-#                 predicted_values = model_arima.predict(n_periods=forecast_length)
-
-#                 # Apply Kalman Filter to smooth the predictions
-#                 kf = KalmanFilter(initial_state_mean=predicted_values[0], n_dim_obs=1)
-#                 predicted_values_kf, _ = kf.filter(predicted_values)
-#                 predicted_data_df = pd.Series(predicted_values_kf.flatten(), index=test_area.index, name='burn_area')
-
-#             except Exception as e:
-#                 print(f"Failed to model real_id {real_id}: {e}. Falling back to zero prediction.")
-#                 # Fall back to simple zero prediction
-#                 predicted_data_df = pd.Series(np.zeros(len(y_test_area)), index=y_test_area.index)
-
-#         # Ensure alignment
-#         predicted_data_df = predicted_data_df.reindex(y_test_area.index, method='nearest')
-
-#         # Calculate RMSE for the current area ID
-#         rmse_area = np.sqrt(mean_squared_error(y_test_area['burn_area'], predicted_data_df))
-#         rmse_values.append(rmse_area)
-
-#     # Calculate the overall RMSE by averaging the RMSE values of all areas
-#     if rmse_values:
-#         overall_rmse = np.mean(rmse_values)
-#         print('Overall Test RMSE:', overall_rmse)
-#     else:
-#         print('No valid RMSE values were calculated')
-
-#     return overall_rmse if rmse_values else None
 
 
 
@@ -200,19 +136,19 @@ def train_model(
         for reg in regressors:
             model.add_regressor(name=reg, standardize=True)
 
-        model.fit(train[['ds', 'y']] + regressors)
-        preds = model.predict(valid['ds'])['yhat']
+        model.fit(train)
+        preds = model.predict(valid)['yhat']
         print(f"RMSE: {np.sqrt(mean_squared_error(y_pred=preds, y_true=valid['y']))}")
 
-
-        predictions = model.predict(test[['ds']] + regressors)
+        predictions = model.predict(test)
         sub['burn_area'] = predictions['yhat'].clip(0, 1)
         today = datetime.date.today()
-        value = '02'
-        sub.to_csv(f'submit_{today}_{value}')
+        value = '03'
+        sub.fillna(value=0.0, inplace=True)
+        sub.to_csv(f'../submissions/_{today}_{value}.csv')
     
     elif model == 'arima':
-        model = None
+        print('not yet done!')
     
 
 def main():
@@ -229,6 +165,7 @@ def main():
         sub=sub,
         model='prophet'
     )
+
 
 if __name__ == '__main__':
     main()

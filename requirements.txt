@@ -7,3 +7,4 @@ statsmodels
 pykalman
 pmdarima
 prophet
+scipy

@@ -74,20 +74,57 @@ def add_regressors(data: pd.DataFrame):
     return regressors
 
 
-def feature_engineering(data: pd.DataFrame):
+def feature_engineering(data: pd.DataFrame) -> pd.DataFrame:
 
-    # data['area'] = pd.to_numeric(data['ID'].apply(lambda x: x.split('_')[0]))
-    # data['date'] = pd.to_datetime(data['ID'].apply(lambda x: x.split('_')[1]))
+    data['area'] = pd.to_numeric(data['ID'].apply(lambda x: x.split('_')[0]))
+    data['date'] = pd.to_datetime(data['ID'].apply(lambda x: x.split('_')[1]))
     # data['burn_area'] = pd.to_numeric(data['burn_area'], errors='coerce')
-    # data['month'] = data.date.dt.month
-    # data['year'] = data.date.dt.year
-    # data['day'] = data.date.dt.weekday
-    # data['quarter'] = data.date.dt.quarter
-    # data['dayofmonth'] =data.date.dt.day
-    # data['dayofyear'] = data.date.dt.dayofyear
-    # data['weekofyear'] = data.date.dt.isocalendar().week
+    data['month'] = data.date.dt.month
+    data['year'] = data.date.dt.year
+    data['day'] = data.date.dt.weekday
+    data['quarter'] = data.date.dt.quarter
+    data['dayofmonth'] =data.date.dt.day
+    data['dayofyear'] = data.date.dt.dayofyear
+    data['weekofyear'] = data.date.dt.isocalendar().week
     return data
 
+
+def prophet_area(train, test):
+
+    rmse_values = []
+
+    for real_id in train['area'].unique():
+        train_area = train.loc[train.area == real_id]
+        test_area = test.loc[test.area == real_id]
+
+        train_area.set_index('date', inplace=True)
+        test_area.set_index('date', inplace=True)
+        X_train_area = train_area.loc[train_area.index.strftime('%Y-%m-%d') < '2011-01-01']
+        y_test_area = train_area.loc[train_area.index.strftime('%Y-%m-%d') >= '2011-01-01']
+
+        start_date = X_train_area.index[-1] + pd.DateOffset(months=1)
+        future = pd.DataFrame({'ds': pd.date_range(start=start_date, periods=len(y_test_area), freq='MS')})
+
+        prophet_data = X_train_area.reset_index().rename(columns={'date': 'ds', 'burn_area': 'y'})
+        prophet_data['ds'] = pd.to_datetime(prophet_data['ds']).dt.to_period('M').dt.to_timestamp()
+
+
+        fb_model = Prophet()
+        for reg in add_regressors(train):
+            fb_model.add_regressor(reg, standardize=True)
+    
+        fb_model.fit(prophet_data)
+        future_forecast = fb_model.predict(future)
+        future_forecast = future_forecast.set_index('ds')
+
+        rmse_area = np.sqrt(mean_squared_error(y_test_area['burn_area'], future_forecast['yhat']))
+        rmse_values.append(rmse_area)
+
+    if rmse_values:
+        overall_rmse = np.mean(rmse_values)
+        print('Overall Test RMSE:', overall_rmse)
+    else:
+        print('No valid RMSE values were calculated')
 
 
 def train_model(
@@ -134,7 +171,7 @@ def train_model(
             holidays_mode=None,
         )
         for reg in regressors:
-            model.add_regressor(name=reg, standardize=True)
+            model.add_regressor(name=reg, standardize=False)
 
         model.fit(train)
         preds = model.predict(valid)['yhat']
@@ -159,12 +196,13 @@ def main():
     train = feature_engineering(data=train)
     test = feature_engineering(data=test)
 
-    train_model(
-        train=train,
-        test=test,
-        sub=sub,
-        model='prophet'
-    )
+    # train_model(
+    #     train=train,
+    #     test=test,
+    #     sub=sub,
+    #     model='prophet'
+    # )
+    prophet_area(train, test)
 
 
 if __name__ == '__main__':

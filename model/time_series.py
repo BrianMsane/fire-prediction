@@ -110,8 +110,8 @@ def prophet_area(train, test):
 
 
         fb_model = Prophet()
-        for reg in add_regressors(train):
-            fb_model.add_regressor(reg, standardize=True)
+        # for reg in add_regressors(train):
+        #     fb_model.add_regressor(reg, standardize=True)
     
         fb_model.fit(prophet_data)
         future_forecast = fb_model.predict(future)
@@ -131,61 +131,65 @@ def train_model(
     train: pd.DataFrame,
     test: pd.DataFrame,
     sub: pd.DataFrame,
-    model : typing.Literal['prophet', 'arima']='prophet'
+    model : typing.Literal['prophet', 'arima']='prophet',
+    area: bool=True
 ):
-    if model == 'prophet':
-        
-        # Prophet format
-        train['date'] = pd.to_datetime(train['ID'].apply(lambda x: x.split('_')[1]))
-        train = train.sort_values(by='date')
-        train['ds'] = train['date']
-        train['y'] = train['burn_area']
-        regressors = add_regressors(data=train)
+    if model == 'prophet' and not area:
+        if not area:            
+            # Prophet format
+            train['date'] = pd.to_datetime(train['ID'].apply(lambda x: x.split('_')[1]))
+            train = train.sort_values(by='date')
+            train['ds'] = train['date']
+            train['y'] = train['burn_area']
+            regressors = add_regressors(data=train)
 
-        test['date'] = pd.to_datetime(test['ID'].apply(lambda x: x.split('_')[1]))
-        test = test.sort_values(by='date')
-        test['ds'] = test['date']
+            test['date'] = pd.to_datetime(test['ID'].apply(lambda x: x.split('_')[1]))
+            test = test.sort_values(by='date')
+            test['ds'] = test['date']
 
-        train_all = train.copy().dropna()
-        train = train_all.loc[train_all.ds < '2012-01-01']
-        valid = train_all.loc[train_all.ds >= '2012-01-01']
+            train_all = train.copy().dropna()
+            train = train_all.loc[train_all.ds < '2012-01-01']
+            valid = train_all.loc[train_all.ds >= '2012-01-01']
 
-        model = Prophet(
-            growth='linear',
-            changepoints=None,
-            n_changepoints=25,
-            changepoint_range=0.8,
-            yearly_seasonality=True,
-            weekly_seasonality=False,
-            daily_seasonality=False,
-            holidays=None,
-            seasonality_mode='additive',
-            seasonality_prior_scale=10.0,
-            holidays_prior_scale=10.0,
-            changepoint_prior_scale=0.05,
-            mcmc_samples=0,
-            interval_width=0.80,
-            uncertainty_samples=1000,
-            stan_backend=None,
-            scaling='absmax',
-            holidays_mode=None,
-        )
-        for reg in regressors:
-            model.add_regressor(name=reg, standardize=False)
+            model = Prophet(
+                growth='linear',
+                changepoints=None,
+                n_changepoints=25,
+                changepoint_range=0.8,
+                yearly_seasonality=True,
+                weekly_seasonality=False,
+                daily_seasonality=False,
+                holidays=None,
+                seasonality_mode='additive',
+                seasonality_prior_scale=10.0,
+                holidays_prior_scale=10.0,
+                changepoint_prior_scale=0.05,
+                mcmc_samples=0,
+                interval_width=0.80,
+                uncertainty_samples=1000,
+                stan_backend=None,
+                scaling='absmax',
+                holidays_mode=None,
+            )
+            for reg in regressors:
+                model.add_regressor(name=reg, standardize=False)
 
-        model.fit(train)
-        preds = model.predict(valid)['yhat']
-        print(f"RMSE: {np.sqrt(mean_squared_error(y_pred=preds, y_true=valid['y']))}")
+            model.fit(train)
+            preds = model.predict(valid)['yhat']
+            print(f"RMSE: {np.sqrt(mean_squared_error(y_pred=preds, y_true=valid['y']))}")
 
-        predictions = model.predict(test)
-        sub['burn_area'] = predictions['yhat'].clip(0, 1)
-        today = datetime.date.today()
-        value = '03'
-        sub.fillna(value=0.0, inplace=True)
-        sub.to_csv(f'../submissions/_{today}_{value}.csv')
+            predictions = model.predict(test)
+            sub['burn_area'] = predictions['yhat'].clip(0, 1)
+            today = datetime.date.today()
+            value = '03'
+            sub.fillna(value=0.0, inplace=True)
+            sub.to_csv(f'../submissions/_{today}_{value}.csv')
+    
+        else:
+            prophet_area(train=train, test=test)
     
     elif model == 'arima':
-        print('not yet done!')
+        print('not yet implemented!')
     
 
 def main():
@@ -196,14 +200,12 @@ def main():
     train = feature_engineering(data=train)
     test = feature_engineering(data=test)
 
-    # train_model(
-    #     train=train,
-    #     test=test,
-    #     sub=sub,
-    #     model='prophet'
-    # )
-    prophet_area(train, test)
-
+    train_model(
+        train=train,
+        test=test,
+        sub=sub,
+        model='prophet'
+    )
 
 if __name__ == '__main__':
     main()

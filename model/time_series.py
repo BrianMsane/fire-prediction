@@ -92,7 +92,6 @@ def feature_engineering(data: pd.DataFrame) -> pd.DataFrame:
 def prophet_area(train, test):
 
     rmse_values = []
-
     for real_id in train['area'].unique():
         train_area = train.loc[train.area == real_id]
         test_area = test.loc[test.area == real_id]
@@ -100,7 +99,10 @@ def prophet_area(train, test):
         train_area.set_index('date', inplace=True)
         test_area.set_index('date', inplace=True)
         X_train_area = train_area.loc[train_area.index.strftime('%Y-%m-%d') < '2011-01-01']
-        y_test_area = train_area.loc[train_area.index.strftime('%Y-%m-%d') >= '2011-01-01']
+        y_train_area = train_area.loc[train_area.index.strftime('%Y-%m-%d') >= '2011-01-01']
+        
+        X_valid_area = test_area.loc[test_area.index.strftime('%Y-%m-%d') < '2011-01-01']
+        y_valid_area = test_area.loc[test_area.index.strftime('%Y-%m-%d') >= '2011-01-01']
 
         start_date = X_train_area.index[-1] + pd.DateOffset(months=1)
         future = pd.DataFrame({'ds': pd.date_range(start=start_date, periods=len(y_test_area), freq='MS')})

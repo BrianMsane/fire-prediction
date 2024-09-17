@@ -78,7 +78,6 @@ def feature_engineering(data: pd.DataFrame) -> pd.DataFrame:
 
     data['area'] = pd.to_numeric(data['ID'].apply(lambda x: x.split('_')[0]))
     data['date'] = pd.to_datetime(data['ID'].apply(lambda x: x.split('_')[1]))
-    # data['burn_area'] = pd.to_numeric(data['burn_area'], errors='coerce')
     data['month'] = data.date.dt.month
     data['year'] = data.date.dt.year
     data['day'] = data.date.dt.weekday
